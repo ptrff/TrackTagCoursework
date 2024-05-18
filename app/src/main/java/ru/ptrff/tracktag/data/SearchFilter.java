@@ -7,8 +7,6 @@ public class SearchFilter {
     private Integer sortBy;
     private Boolean withImage;
     private Boolean withoutImage;
-    private Boolean byGuests;
-    private Boolean byUsers;
     private Boolean withNoLikes;
 
     public static SearchFilter getInstance(){
@@ -52,22 +50,6 @@ public class SearchFilter {
 
     public void setWithoutImage(Boolean withoutImage) {
         this.withoutImage = withoutImage;
-    }
-
-    public Boolean getByGuests() {
-        return byGuests;
-    }
-
-    public void setByGuests(Boolean byGuests) {
-        this.byGuests = byGuests;
-    }
-
-    public Boolean getByUsers() {
-        return byUsers;
-    }
-
-    public void setByUsers(Boolean byUsers) {
-        this.byUsers = byUsers;
     }
 
     public Boolean getWithNoLikes() {

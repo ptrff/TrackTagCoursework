@@ -1,14 +1,19 @@
 package ru.ptrff.tracktag.views;
 
+import static ru.ptrff.tracktag.data.OptionActions.SAVE;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,23 +22,34 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.gson.Gson;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
 
 import ru.ptrff.tracktag.R;
 import ru.ptrff.tracktag.adapters.OptionsAdapter;
 import ru.ptrff.tracktag.adapters.TagsAdapter;
 import ru.ptrff.tracktag.data.SearchFilter;
 import ru.ptrff.tracktag.data.UserData;
-import ru.ptrff.tracktag.data.local.TagLocalRepository;
 import ru.ptrff.tracktag.databinding.FragmentHomeBinding;
 import ru.ptrff.tracktag.interfaces.MainFragmentCallback;
+import ru.ptrff.tracktag.models.Option;
 import ru.ptrff.tracktag.models.Tag;
 import ru.ptrff.tracktag.viewmodels.HomeViewModel;
 
@@ -47,6 +63,8 @@ public class HomeFragment extends Fragment {
     private LinearLayoutManager tagsListLayoutManager;
     private boolean allowingPermission;
 
+    private AlertDialog loading;
+
     public HomeFragment() {
     }
 
@@ -59,10 +77,6 @@ public class HomeFragment extends Fragment {
         );
 
         viewModel = new ViewModelProvider(this).get(HomeViewModel.class);
-        if (!viewModel.isInitiated()) {
-            viewModel.setLocalRepo(new TagLocalRepository(requireContext()));
-            viewModel.setInitiated(true);
-        }
 
         mainFragmentCallback = (MainFragmentCallback) requireActivity();
     }
@@ -90,6 +104,8 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        initLoading();
+
         initRecyclers();
         initObservers();
         initClickListeners();
@@ -97,6 +113,15 @@ public class HomeFragment extends Fragment {
         setBottomSheetPeekHeight();
         hideUpButton();
         setTagsListHeight();
+
+        loading.show();
+    }
+
+    private void initLoading() {
+        loading = new MaterialAlertDialogBuilder(requireContext())
+                .setView(R.layout.dialog_loading)
+                .setCancelable(false)
+                .create();
     }
 
     private void initObservers() {
@@ -104,6 +129,7 @@ public class HomeFragment extends Fragment {
             tagsAdapter.setAllTags(tags);
             mainFragmentCallback.onTagsLoaded(tags);
             applySearchFilters();
+            loading.dismiss();
             scrollUp(false);
         });
 
@@ -312,10 +338,45 @@ public class HomeFragment extends Fragment {
         // options list
         binding.optionsList.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         optionsAdapter = new OptionsAdapter(requireContext());
-        optionsAdapter.setOptionsEvents(option -> mainFragmentCallback.performAction(option.getAction()));
+        optionsAdapter.setOptionsEvents(option -> {
+            if (option.getAction().equals(SAVE)) {
+                showSaveDialog();
+            } else {
+                mainFragmentCallback.performAction(option.getAction());
+            }
+        });
         binding.optionsList.setAdapter(optionsAdapter);
         viewModel.initOptions();
     }
+
+    String jsonLog;
+    private void showSaveDialog() {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
+        builder.setTitle(R.string.continue_q);
+        builder.setMessage(R.string.save_all_tags_into_json_file);
+        builder.setPositiveButton(R.string.yes, (dialog, which) -> {
+            Gson gson = new Gson();
+            jsonLog = gson.toJson(viewModel.getTags().getValue());
+            launcher.launch("TrackTagJsonLog.json");
+        });
+        builder.setNegativeButton(R.string.no, null);
+        builder.show();
+    }
+
+    ActivityResultLauncher<String> launcher = registerForActivityResult(
+            new ActivityResultContracts.CreateDocument("application/json"),
+            uri -> {
+                if (uri != null) {
+                    try (OutputStream outputStream = requireActivity().getContentResolver().openOutputStream(uri)) {
+                        outputStream.write(jsonLog.getBytes());
+                        outputStream.flush();
+                    } catch (IOException e) {
+                        Log.e(getClass().getCanonicalName(), e.toString());
+                    }
+                }
+            }
+    );
+
 
     private void initTagListScrollListener() {
         binding.tagsList.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -354,9 +415,9 @@ public class HomeFragment extends Fragment {
 
     private void setTagsListHeight() {
         binding.tagsList.post(() -> {
-            binding.tagsList.getLayoutParams().height = binding.tagsList.getMeasuredHeight()
-                    + ((ViewGroup.MarginLayoutParams) binding.optionsList.getLayoutParams()).bottomMargin
-                    + binding.optionsList.getMeasuredHeight();
+            binding.tagsList.getLayoutParams().height = (int) (binding.tagsList.getMeasuredHeight()
+                                + ((ViewGroup.MarginLayoutParams) binding.optionsList.getLayoutParams()).bottomMargin
+                                + binding.optionsList.getMeasuredHeight()*0.5f);
         });
     }
 

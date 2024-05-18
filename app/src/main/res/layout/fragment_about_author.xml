@@ -12,19 +12,45 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <ImageView
+        <com.google.android.material.card.MaterialCardView
+            style="?materialCardViewElevatedStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:src="@drawable/ic_launcher_foreground" />
+            app:cardCornerRadius="60dp">
 
-        <TextView
+            <androidx.appcompat.widget.AppCompatImageView
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:src="@drawable/manulav" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginBottom="16dp"
-            android:text="@string/app_name"
-            android:textSize="24sp" />
+
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/petrov_igor"
+                android:textSize="24sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginEnd="2dp"
+                android:text="@string/ptrff"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:translationY="-4dp" />
+        </LinearLayout>
 
         <View
             android:layout_width="match_parent"
@@ -57,8 +83,8 @@
                     <ImageView
                         android:layout_width="56dp"
                         android:layout_height="56dp"
-                        android:src="@drawable/ic_about"
-                        app:tint="?colorOnBackground" />
+                        app:tint="?colorOnBackground"
+                        android:src="@drawable/ic_about" />
 
                 </com.google.android.material.card.MaterialCardView>
 
@@ -71,14 +97,26 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/application"
+                        android:text="@string/about_author"
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/app_descr"
+                        android:text="Учебная группа: ИКБО-03-22"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Год разработки: 2024"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="E-mail: saiiron@mail.ru"
                         android:textSize="16sp" />
 
                 </LinearLayout>
@@ -93,7 +131,7 @@
             android:layout_height="wrap_content">
 
             <LinearLayout
-                android:id="@+id/instuction"
+                android:id="@+id/contacts"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="?android:attr/selectableItemBackground"
@@ -111,8 +149,8 @@
                     <androidx.appcompat.widget.AppCompatImageView
                         android:layout_width="56dp"
                         android:layout_height="56dp"
-                        android:src="@drawable/ic_text"
-                        app:tint="?colorOnBackground" />
+                        app:tint="?colorOnBackground"
+                        android:src="@drawable/ic_contact" />
 
                 </com.google.android.material.card.MaterialCardView>
 
@@ -125,15 +163,20 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Инструкция"
+                        android:text="@string/contacts"
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:alpha="0.5"
-                        android:text="Нажмите, чтобы откыть инструкцию"
+                        android:text="VK: @i_petroff"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TG: @i_petroff"
                         android:textSize="16sp" />
 
                 </LinearLayout>

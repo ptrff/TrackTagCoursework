@@ -1,61 +1,63 @@
 package ru.ptrff.tracktag.models;
 
-import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-import androidx.room.TypeConverter;
-import androidx.room.TypeConverters;
 
-import com.google.gson.annotations.SerializedName;
+import java.util.HashMap;
 
-import java.util.Objects;
 
-import ru.ptrff.tracktag.utils.UserConverter;
-
-@Entity(tableName = "tags")
 public class Tag implements Parcelable {
-    @PrimaryKey
     @NonNull
-    @SerializedName("id")
     private String id;
 
-    @SerializedName("latitude")
     private double latitude;
 
-    @SerializedName("longitude")
     private double longitude;
 
-    @SerializedName("description")
     private String description;
 
-    @SerializedName("image")
     private String image;
 
-    @SerializedName("likes")
-    private int likes;
+    private HashMap<String, Object> likes;
 
-    @SerializedName("is_liked")
-    private boolean isLiked;
-
-    @TypeConverters({UserConverter.class})
-    @SerializedName("user")
     private User user;
 
-    public Tag(@NonNull String id, double latitude, double longitude, String description, String image, int likes, boolean isLiked, User user) {
+    public Tag() {
+
+    }
+
+    public Tag(@NonNull String id, double latitude, double longitude, String description, String image, HashMap<String, Object> likes, User user) {
         this.id = id;
         this.latitude = latitude;
         this.longitude = longitude;
         this.description = description;
         this.image = image;
         this.likes = likes;
-        this.isLiked = isLiked;
         this.user = user;
     }
+
+    protected Tag(Parcel in) {
+        id = in.readString();
+        latitude = in.readDouble();
+        longitude = in.readDouble();
+        description = in.readString();
+        image = in.readString();
+        user = in.readParcelable(User.class.getClassLoader());
+    }
+
+    public static final Creator<Tag> CREATOR = new Creator<Tag>() {
+        @Override
+        public Tag createFromParcel(Parcel in) {
+            return new Tag(in);
+        }
+
+        @Override
+        public Tag[] newArray(int size) {
+            return new Tag[size];
+        }
+    };
 
     @NonNull
     public String getId() {
@@ -98,20 +100,12 @@ public class Tag implements Parcelable {
         this.image = image;
     }
 
-    public Integer getLikes() {
+    public HashMap<String, Object> getLikes() {
         return likes;
     }
 
-    public void setLikes(Integer likes) {
+    public void setLikes(HashMap<String, Object> likes) {
         this.likes = likes;
-    }
-
-    public Boolean getLiked() {
-        return isLiked;
-    }
-
-    public void setLiked(Boolean liked) {
-        isLiked = liked;
     }
 
     public User getUser() {
@@ -123,48 +117,18 @@ public class Tag implements Parcelable {
     }
 
     @Override
-    public boolean equals(@Nullable Object obj) {
-        return super.equals(obj);
-    }
-
-    //Parcelable
-    protected Tag(Parcel in) {
-        id = Objects.requireNonNull(in.readString());
-        latitude = in.readDouble();
-        longitude = in.readDouble();
-        description = in.readString();
-        image = in.readString();
-        likes = in.readInt();
-        isLiked = in.readByte() != 0;
-        user = in.readParcelable(User.class.getClassLoader());
-    }
-
-    public static final Creator<Tag> CREATOR = new Creator<Tag>() {
-        @Override
-        public Tag createFromParcel(Parcel in) {
-            return new Tag(in);
-        }
-
-        @Override
-        public Tag[] newArray(int size) {
-            return new Tag[size];
-        }
-    };
-
-    @Override
     public int describeContents() {
         return 0;
     }
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeString(this.id);
-        dest.writeDouble(this.latitude);
-        dest.writeDouble(this.longitude);
-        dest.writeString(this.description);
-        dest.writeString(this.image);
-        dest.writeInt(this.likes);
-        dest.writeByte(this.isLiked ? (byte) 1 : (byte) 0);
-        dest.writeParcelable(this.user, flags);
+        dest.writeString(id);
+        dest.writeDouble(latitude);
+        dest.writeDouble(longitude);
+        dest.writeString(description);
+        dest.writeString(image);
+        dest.writeMap(likes);
+        dest.writeParcelable(user, flags);
     }
 }

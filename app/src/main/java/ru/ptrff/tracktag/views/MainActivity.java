@@ -54,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 
 import ru.ptrff.tracktag.BuildConfig;
 import ru.ptrff.tracktag.R;
+import ru.ptrff.tracktag.api.FirebaseHelper;
 import ru.ptrff.tracktag.data.OptionActions;
 import ru.ptrff.tracktag.data.UserData;
 import ru.ptrff.tracktag.databinding.ActivityMainBinding;
@@ -88,6 +89,8 @@ public class MainActivity extends AppCompatActivity implements MainFragmentCallb
     private Point targetPoint;
     private CameraPosition cameraPosition;
 
+    private FirebaseHelper firebaseHelper;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -95,8 +98,10 @@ public class MainActivity extends AppCompatActivity implements MainFragmentCallb
         checkDarkMode();
 
         if (savedInstanceState == null) {
-            // Restore User Data
-            UserData.getInstance().restoreData(getPreferences(MODE_PRIVATE));
+            UserData.getInstance().restoreData(getSharedPreferences("UserData", MODE_PRIVATE));
+
+            firebaseHelper = FirebaseHelper.getInstance();
+            firebaseHelper.init();
 
             // Init MapKit
             initMapKit();
@@ -225,8 +230,6 @@ public class MainActivity extends AppCompatActivity implements MainFragmentCallb
 
         // Setup bottom navigation bar
         binding.bottomNavigationView.setOnItemSelectedListener(item -> {
-            //if (bottomState < 0) return false; // do not change state while animating
-
             if (item.getItemId() == R.id.map) {
                 setBottomSheetState(0);
             }
@@ -414,10 +417,6 @@ public class MainActivity extends AppCompatActivity implements MainFragmentCallb
     @Override
     public void performAction(OptionActions action) {
         switch (action) {
-            case AUTH:
-                selectedOption = OptionActions.AUTH;
-                binding.bottomNavigationView.setSelectedItemId(R.id.more);
-                break;
             case SUBS:
                 selectedOption = OptionActions.SUBS;
                 binding.bottomNavigationView.setSelectedItemId(R.id.more);
@@ -432,6 +431,10 @@ public class MainActivity extends AppCompatActivity implements MainFragmentCallb
                 break;
             case ABOUT:
                 selectedOption = OptionActions.ABOUT;
+                binding.bottomNavigationView.setSelectedItemId(R.id.more);
+                break;
+            case AUTHOR:
+                selectedOption = OptionActions.AUTHOR;
                 binding.bottomNavigationView.setSelectedItemId(R.id.more);
                 break;
         }
@@ -519,9 +522,6 @@ public class MainActivity extends AppCompatActivity implements MainFragmentCallb
             case LIST:
                 navController.navigate(R.id.action_global_moreFragment);
                 break;
-            case AUTH:
-                navController.navigate(R.id.action_global_authFragment);
-                break;
             case SUBS:
                 navController.navigate(R.id.action_global_subsFragment);
                 break;
@@ -530,6 +530,9 @@ public class MainActivity extends AppCompatActivity implements MainFragmentCallb
                 break;
             case ABOUT:
                 navController.navigate(R.id.action_global_aboutFragment);
+                break;
+            case AUTHOR:
+                navController.navigate(R.id.action_global_aboutAuthorFragment);
                 break;
         }
         selectedOption = OptionActions.LIST;
@@ -553,35 +556,18 @@ public class MainActivity extends AppCompatActivity implements MainFragmentCallb
 
     private void checkForWorker() {
         WorkManager manager = WorkManager.getInstance(this);
-
         manager.getWorkInfosByTagLiveData("post_checking").observe(this, workInfos -> {
             if (workInfos.size() == 0 || workInfos.get(0).getState().isFinished()) {
-                Log.d(getClass().getCanonicalName(), "worker started");
-            } else {
-                Log.d(getClass().getCanonicalName(), "worker working");
-            }
-        });
-
-        Integer interval = new Integer[]{30, 60, 180}[
-                UserData.getInstance().getNotificationsInterval()];
-
-
-        manager.enqueueUniquePeriodicWork(
-                "post_checking",
-                ExistingPeriodicWorkPolicy.UPDATE,
-                new PeriodicWorkRequest.Builder(PostCheckingWorker.class,
-                        interval, TimeUnit.MINUTES,
-                        interval-5, TimeUnit.MINUTES)
-                        .addTag("post_checking")
-                        .setConstraints(
-                                new Constraints(
-                                        NetworkType.CONNECTED,
-                                        false,
-                                        false,
-                                        false)
-                        )
-                        .build()
-        );
+                Log.d(getClass().getCanonicalName(), "worker started");} else {
+                Log.d(getClass().getCanonicalName(), "worker working");}});
+        Integer interval = new Integer[]{30, 60, 180}[UserData.getInstance().getNotificationsInterval()];
+        manager.enqueueUniquePeriodicWork("post_checking",
+                ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+                new PeriodicWorkRequest.Builder(PostCheckingWorker.class, interval, TimeUnit.MINUTES,
+                        interval - 5, TimeUnit.MINUTES).addTag("post_checking")
+                        .setConstraints(new Constraints(NetworkType.CONNECTED, false,
+                                false,
+                                false)).build());
     }
 
     private void checkDarkMode() {

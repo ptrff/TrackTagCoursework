@@ -15,7 +15,8 @@
     <string name="login">Войти</string>
     <string name="pull_down_to_return">Потяни вниз, чтобы вернуться</string>
     <string name="empty_fields">Заполнены не все поля!</string>
-    <string name="password_too_short">Пароль должен содержать хотя бы 3 символа!</string>
+    <string name="password_too_short">Пароль должен содержать хотя бы 6 символов!</string>
+    <string name="email_too_short">Слишком короткий адрес электронной почты!</string>
     <string name="username_too_short">Имя пользователя должно содержать хотя бы 3 символа!</string>
     <string name="user_exists">Пользователь с таким именем уже существует!</string>
     <string name="unknown_error">Произошла неизвестная ошибка!</string>
@@ -83,4 +84,19 @@
     <string name="contacts">Контакты</string>
     <string name="application">Приложение</string>
     <string name="choose_link">Выберите ссылку</string>
+    <string name="signin">Вход</string>
+    <string name="log_in_to_account">Войдите в аккаунт</string>
+    <string name="e_mail">E-Mail</string>
+    <string name="loading">Загрузка..</string>
+    <string name="yes">Да</string>
+    <string name="save_all_tags_into_json_file">Сохранить все теги в файл .json?</string>
+    <string name="continue_q">Продолжить?</string>
+    <string name="no">Нет</string>
+    <string name="petrov_igor">Петров И.Р.</string>
+    <string name="ptrff">ptrff</string>
+    <string name="about_author">Об авторе</string>
+    <string name="app_descr">Это приложение призвано помочь путешественникам делиться интересными местами друг с другом.</string>
+    <string name="instruction">Инструкция использования</string>
+    <string name="instruction_text">В нижнем навигационном меню находятся три пункта: главная, карта и опции. По нажатию на каждый из них, интерфейс переходит в состояние, соответствующее названию пункта.\n • На странице \"Главная\" отображается строка поиска, список всех тегов пользователей, а также карта. Вы можете открыть список тегов на весь экран, потянув за якорь. Начните вводить запрос в поисковую строку для поиска, он динамический. Вы можете задать фильтры поиска.\n • На странице \"Карта\" карта открыта на весь экран, скрыт список тегов, они видны на карте. Поиск работает идентично. Нажмите на пустое место карты для появления выпадающего меню. Нажав на первый пункт, вы можете создать свой тег, добавив к нему изображение и описание. Далее вы (или администратор) можете удалить свой тег.\n • На странице \"Опции\" отображается имя пользователя, кнопка выхода из аккаунта, а также список опций, доступных пользователю.</string>
+    <string name="ok">OK</string>
 </resources>

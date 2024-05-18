@@ -14,6 +14,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -30,6 +31,8 @@ public class AddTagFragment extends Fragment {
 
     private FragmentAddTagBinding binding;
     private AddTagViewModel viewModel;
+
+    private AlertDialog loading;
 
     public AddTagFragment() {
     }
@@ -56,6 +59,15 @@ public class AddTagFragment extends Fragment {
 
         initViews();
         initObservers();
+        initLoader();
+    }
+
+    private void initLoader(){
+        loading = new MaterialAlertDialogBuilder(requireContext())
+                .setView(R.layout.dialog_loading)
+                .setCancelable(false)
+                .create();
+
     }
 
     private void initObservers() {
@@ -65,6 +77,7 @@ public class AddTagFragment extends Fragment {
                 MainFragmentCallback callback =((MainFragmentCallback) requireActivity());
                 callback.performAction(OptionActions.LIST);
             }
+            loading.dismiss();
         });
     }
 
@@ -107,11 +120,12 @@ public class AddTagFragment extends Fragment {
                 return;
             }
             viewModel.createTag(
-                    requireContext().getContentResolver(),
                     viewModel.getLatitude(),
                     viewModel.getLongitude(),
                     binding.descriptionField.getText().toString()
             );
+
+            loading.show();
         });
 
         binding.cancelButton.setOnClickListener(v -> {

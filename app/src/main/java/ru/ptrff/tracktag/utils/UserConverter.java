@@ -19,6 +19,6 @@ public class UserConverter {
     public User toUser(String value) {
         if(value.equals("\\\\\\")) return null;
         String[] parts = value.split("///");
-        return new User(parts[0], parts[1]);
+        return new User(parts[0], parts[1], "user");
     }
 }

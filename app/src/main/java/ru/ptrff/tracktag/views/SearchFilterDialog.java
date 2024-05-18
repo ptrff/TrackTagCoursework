@@ -52,7 +52,7 @@ public class SearchFilterDialog extends AlertDialog {
         };
 
         SearchFilter filter = SearchFilter.getInstance();
-        if (filter.getByUsers() != null) {
+        if (filter.getSortBy() != null) {
             binding.filterByDropdown.setText(filters[filter.getFilterBy()]);
             binding.sortByDropdown.setText(sorts[filter.getSortBy()]);
         } else {
@@ -67,8 +67,6 @@ public class SearchFilterDialog extends AlertDialog {
         String[] chips = new String[]{
                 getContext().getResources().getString(R.string.with_image),
                 getContext().getResources().getString(R.string.without_image),
-                getContext().getResources().getString(R.string.by_guests),
-                getContext().getResources().getString(R.string.by_users),
                 getContext().getResources().getString(R.string.with_no_likes)
         };
         Resources r = getContext().getResources();
@@ -92,16 +90,6 @@ public class SearchFilterDialog extends AlertDialog {
         if (filter.getWithoutImage() != null
                 && filter.getWithoutImage()
                 && chipText.equals(r.getString(R.string.without_image))) {
-            chip.setChecked(true);
-        }
-        if (filter.getByGuests() != null
-                && filter.getByGuests()
-                && chipText.equals(r.getString(R.string.by_guests))) {
-            chip.setChecked(true);
-        }
-        if (filter.getByUsers() != null
-                && filter.getByUsers()
-                && chipText.equals(r.getString(R.string.by_users))) {
             chip.setChecked(true);
         }
         if (filter.getWithNoLikes() != null
@@ -137,9 +125,7 @@ public class SearchFilterDialog extends AlertDialog {
                 Chip chip = (Chip) binding.chipGroup.getChildAt(i);
                 if (i == 0) filter.setWithImage(chip.isChecked());
                 if (i == 1) filter.setWithoutImage(chip.isChecked());
-                if (i == 2) filter.setByGuests(chip.isChecked());
-                if (i == 3) filter.setByUsers(chip.isChecked());
-                if (i == 4) filter.setWithNoLikes(chip.isChecked());
+                if (i == 2) filter.setWithNoLikes(chip.isChecked());
             }
             dismiss();
         });

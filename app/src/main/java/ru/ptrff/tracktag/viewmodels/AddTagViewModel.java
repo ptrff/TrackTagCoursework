@@ -15,12 +15,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.RequestBody;
-import ru.ptrff.tracktag.api.MapsRepository;
+import ru.ptrff.tracktag.api.FirebaseHelper;
 
 public class AddTagViewModel extends ViewModel {
 
@@ -42,56 +40,27 @@ public class AddTagViewModel extends ViewModel {
     }
 
     @SuppressLint("CheckResult")
-    public void createTag(ContentResolver resolver, double latitude, double longitude, String description) {
-        if (imageUri == null) {
-            createTag(latitude, longitude, description);
-        } else {
-            Observable
-                    .fromCallable(() -> convertToByteArray(resolver, imageUri))
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(byteArray -> {
-                        createTag(latitude, longitude, description, byteArray);
-                    }, throwable -> {
+    public void createTag(double latitude, double longitude, String description) {
+        FirebaseHelper helper = FirebaseHelper.getInstance();
+
+        helper
+                .uploadImage(imageUri)
+                .flatMap(booleanStringPair -> {
+                    if (booleanStringPair.first) {
+                        return helper.createTag(latitude, longitude, description, booleanStringPair.second);
+                    } else {
+                        return Flowable.just(booleanStringPair);
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(booleanStringPair -> {
+                    if (booleanStringPair.first) {
+                        success.postValue(true);
+                    } else {
                         success.postValue(false);
-                        Log.e(getClass().getCanonicalName(), "Error converting image: " + throwable.getMessage());
-                    });
-        }
-    }
-
-    @SuppressLint("CheckResult")
-    private void createTag(double latitude, double longitude, String description, byte[] byteArray) {
-        RequestBody imageBody = RequestBody.create(MediaType.parse("image/*"), byteArray);
-
-        MapsRepository repo = new MapsRepository();
-        repo.addTag(
-                        latitude,
-                        longitude,
-                        description,
-                        MultipartBody.Part.createFormData("image", "image.png", imageBody)
-                )
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(imgBBResponse -> {
-                    success.postValue(true);
-                }, throwable -> {
-                    success.postValue(false);
-                    Log.e(getClass().getCanonicalName(), "Error creating tag: " + throwable.getMessage());
-                });
-    }
-
-    @SuppressLint("CheckResult")
-    private void createTag(double latitude, double longitude, String description) {
-        MapsRepository repo = new MapsRepository();
-        repo.addTag(
-                        latitude,
-                        longitude,
-                        description
-                )
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(imgBBResponse -> {
-                    success.postValue(true);
+                        Log.e(getClass().getCanonicalName(), "Error creating tag: " + booleanStringPair.second);
+                    }
                 }, throwable -> {
                     success.postValue(false);
                     Log.e(getClass().getCanonicalName(), "Error creating tag: " + throwable.getMessage());

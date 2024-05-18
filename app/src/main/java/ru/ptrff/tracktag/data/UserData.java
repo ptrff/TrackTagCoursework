@@ -3,6 +3,7 @@ package ru.ptrff.tracktag.data;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
@@ -24,7 +25,8 @@ public class UserData {
     private boolean isLoggedIn = false;
     private String userId;
     private String userName;
-    private String accessToken;
+    private String email;
+    private String role;
     private final HashSet<String> subs = new HashSet<>();
     private HashMap<String, String> lastTags = new HashMap<>();
 
@@ -50,7 +52,8 @@ public class UserData {
         isLoggedIn = preferences.getBoolean("isLoggedIn", false);
         userId = preferences.getString("userId", "");
         userName = preferences.getString("userName", "");
-        accessToken = preferences.getString("accessToken", "");
+        role = preferences.getString("role", "user");
+        email = preferences.getString("email", "");
         subs.addAll(preferences.getStringSet("subs", new HashSet<>()));
 
         // preferences
@@ -72,13 +75,24 @@ public class UserData {
         isLoggedIn = false;
         userId = "";
         userName = "";
-        accessToken = "";
+        role = "user";
+        email = "";
         subs.clear();
         lastTags.clear();
         isNotificationsAllowed = false;
         notificationsInterval = 1;
         allowOptionsOnMainScreen = true;
         nightMode = false;
+        FirebaseAuth.getInstance().signOut();
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+        editor.putString("role", role).commit();
     }
 
     public boolean isNightMode() {
@@ -148,6 +162,15 @@ public class UserData {
         return users;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+        editor.putString("email", email).commit();
+    }
+
     public void setLoggedIn(boolean isLoggedIn) {
         this.isLoggedIn = isLoggedIn;
         editor.putBoolean("isLoggedIn", isLoggedIn).commit();
@@ -173,15 +196,6 @@ public class UserData {
 
     public String getUserName() {
         return userName;
-    }
-
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-        editor.putString("accessToken", accessToken).commit();
-    }
-
-    public String getAccessToken() {
-        return accessToken;
     }
 
     public boolean isNotificationsAllowed() {

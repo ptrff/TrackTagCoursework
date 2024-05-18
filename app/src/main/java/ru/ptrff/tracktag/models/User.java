@@ -4,23 +4,40 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
-import androidx.room.Entity;
-
-import com.google.gson.annotations.SerializedName;
 
 public class User implements Parcelable {
 
-    @SerializedName("id")
     private String id;
-
-    @SerializedName("username")
     private String username;
+    private String role;
 
+    public User() {
 
-    public User(String id, String username) {
+    }
+
+    public User(String id, String username, String role) {
         this.id = id;
         this.username = username;
+        this.role = role;
     }
+
+    protected User(Parcel in) {
+        id = in.readString();
+        username = in.readString();
+        role = in.readString();
+    }
+
+    public static final Creator<User> CREATOR = new Creator<User>() {
+        @Override
+        public User createFromParcel(Parcel in) {
+            return new User(in);
+        }
+
+        @Override
+        public User[] newArray(int size) {
+            return new User[size];
+        }
+    };
 
     public String getId() {
         return id;
@@ -38,23 +55,13 @@ public class User implements Parcelable {
         this.username = username;
     }
 
-    // Parcelable
-    protected User(Parcel in) {
-        id = in.readString();
-        username = in.readString();
+    public String getRole() {
+        return role;
     }
 
-    public static final Creator<User> CREATOR = new Creator<User>() {
-        @Override
-        public User createFromParcel(Parcel in) {
-            return new User(in);
-        }
-
-        @Override
-        public User[] newArray(int size) {
-            return new User[size];
-        }
-    };
+    public void setRole(String role) {
+        this.role = role;
+    }
 
     @Override
     public int describeContents() {
@@ -63,7 +70,17 @@ public class User implements Parcelable {
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
-        dest.writeString(this.id);
-        dest.writeString(this.username);
+        dest.writeString(id);
+        dest.writeString(username);
+        dest.writeString(role);
+    }
+
+    @Override
+    public String toString() {
+        return "{" +
+                "id=" + id +
+                ", username=" + username +
+                ", role=" + role +
+                '}';
     }
 }

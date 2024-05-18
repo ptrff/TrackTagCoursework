@@ -16,34 +16,46 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import ru.ptrff.tracktag.BuildConfig;
 import ru.ptrff.tracktag.R;
+import ru.ptrff.tracktag.databinding.FragmentAboutAuthorBinding;
 import ru.ptrff.tracktag.databinding.FragmentAboutBinding;
 
-public class AboutFragment extends Fragment {
+public class AboutAuthorFragment extends Fragment {
 
-    private FragmentAboutBinding binding;
+    private FragmentAboutAuthorBinding binding;
 
-    public AboutFragment() {
+    public AboutAuthorFragment() {
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        binding = FragmentAboutBinding.inflate(inflater);
+        binding = FragmentAboutAuthorBinding.inflate(inflater);
         return binding.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        binding.instuction.setOnClickListener(v -> {
-            showInstructionDialog();
+        binding.contacts.setOnClickListener(v -> {
+            showLinksDialog(new String[]{
+                    "https://vk.com/i_petroff",
+                    "https://t.me/i_petroff"
+            });
         });
     }
 
-    private void showInstructionDialog() {
+    private void showLinksDialog(String[] links) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
-        builder.setTitle(R.string.instruction);
-        builder.setMessage(R.string.instruction_text);
-        builder.setPositiveButton(R.string.ok, null);
+        builder.setTitle(R.string.choose_link);
+        builder.setItems(links, (dialog, which) -> {
+            Toast.makeText(requireContext(), " "+which, Toast.LENGTH_SHORT).show();
+            followLink(links[which]);
+        });
         builder.show();
+    }
+
+    private void followLink(String link){
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(link));
+        startActivity(intent);
     }
 }

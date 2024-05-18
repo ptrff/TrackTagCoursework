@@ -21,19 +21,19 @@ import java.util.List;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import ru.ptrff.tracktag.R;
-import ru.ptrff.tracktag.api.MapsRepository;
+import ru.ptrff.tracktag.api.FirebaseHelper;
 import ru.ptrff.tracktag.data.UserData;
 import ru.ptrff.tracktag.models.Tag;
 import ru.ptrff.tracktag.models.User;
 
 public class PostCheckingWorker extends Worker {
     private UserData data;
-    private MapsRepository repo;
+    private FirebaseHelper helper;
 
     public PostCheckingWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
         data = UserData.getInstance();
-        repo = new MapsRepository();
+        helper = FirebaseHelper.getInstance();
     }
 
     @NonNull
@@ -45,7 +45,7 @@ public class PostCheckingWorker extends Worker {
 
     @SuppressLint("CheckResult")
     private void checkForNewPosts() {
-        repo
+        helper
                 .getAllTags()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -65,6 +65,7 @@ public class PostCheckingWorker extends Worker {
                                 sub,
                                 i
                         );
+                        data.setLastTagId(sub, tag.getId());
                         Log.d(getClass().getCanonicalName(), "new post " + tag.getId() + " saved id " + data.getLastTagId(sub));
                     } else {
                         Log.d(getClass().getCanonicalName(), "no new post");
@@ -86,14 +87,12 @@ public class PostCheckingWorker extends Worker {
             NotificationManager notificationManager = getApplicationContext().getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }
-
         // creating notification
         NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), "tracktag-" + user.getUsername())
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(title)
                 .setContentText(content)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT);
-
         // displaying notification
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
         // unique id for each notification

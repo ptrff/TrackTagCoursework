@@ -1,10 +1,8 @@
 package ru.ptrff.tracktag.viewmodels;
 
 import android.annotation.SuppressLint;
-import android.net.ConnectivityManager;
 import android.util.Log;
 
-import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
@@ -13,36 +11,30 @@ import java.util.List;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import ru.ptrff.tracktag.api.MapsRepository;
+import ru.ptrff.tracktag.api.FirebaseHelper;
 import ru.ptrff.tracktag.data.Options;
 import ru.ptrff.tracktag.data.UserData;
-import ru.ptrff.tracktag.data.local.TagLocalRepository;
 import ru.ptrff.tracktag.models.Option;
 import ru.ptrff.tracktag.models.Tag;
 import ru.ptrff.tracktag.models.User;
 
 public class HomeViewModel extends ViewModel {
-    private MapsRepository repo;
-    private TagLocalRepository localRepo;
+    private FirebaseHelper helper;
     private final MutableLiveData<List<Option>> options = new MutableLiveData<>();
     private final MutableLiveData<List<Tag>> tags = new MutableLiveData<>();
-    private boolean isInitiated;
 
     public HomeViewModel() {
-        repo = new MapsRepository();
+        helper = FirebaseHelper.getInstance();
     }
 
-    public void setLocalRepo(TagLocalRepository localRepo) {
-        this.localRepo = localRepo;
-    }
 
     public void initOptions() {
-        options.postValue(UserData.getInstance().isLoggedIn() ? Options.user : Options.guest);
+        options.postValue(Options.home);
     }
 
     @SuppressLint("CheckResult")
     public void getData() {
-        repo
+        helper
                 .getAllTags()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -50,44 +42,11 @@ public class HomeViewModel extends ViewModel {
                         receivedTags -> {
                             Collections.reverse(receivedTags);
                             tags.postValue(receivedTags);
-                            saveLocalData(receivedTags);
-                            updateLastTagsIDs(receivedTags);
-                        },
-                        throwable -> {
-                            getLocalData();
-                            Log.e(getClass().getCanonicalName(), throwable.toString());
-                        }
-                );
-    }
-
-    @SuppressLint("CheckResult")
-    private void getLocalData() {
-        localRepo
-                .getAllLocalTags()
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        localTags -> {
-                            tags.postValue(localTags);
-                            Log.d(getClass().getCanonicalName(), localTags.size() + " local tags loaded");
                         },
                         throwable -> {
                             Log.e(getClass().getCanonicalName(), throwable.toString());
                         }
                 );
-    }
-
-    @SuppressLint("CheckResult")
-    private void saveLocalData(List<Tag> tags) {
-        localRepo
-                .insertOrReplaceOrDelete(tags)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(() -> {
-                    Log.d(getClass().getCanonicalName(), "local tags updated");
-                }, throwable -> {
-                    Log.e(getClass().getCanonicalName(), throwable.toString());
-                });
     }
 
     public void updateLastTagsIDs(List<Tag> tags) {
@@ -108,28 +67,40 @@ public class HomeViewModel extends ViewModel {
 
     @SuppressLint("CheckResult")
     public void likeTag(Tag tag, boolean like) {
-        if (like) {
-            repo
-                    .likeTag(tag.getId())
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe((tag1, throwable) -> {});
-        } else {
-            repo
-                    .deleteLikeFromTag(tag.getId())
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe((unused, throwable) -> {});
-        }
+        helper
+                .likeDislike(tag, like)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        result -> {
+                            if (!result) {
+                                Log.e(getClass().getCanonicalName(), "Error liking/disliking tag");
+                            }
+                        },
+                        throwable -> Log.e(getClass().getCanonicalName(), throwable.toString())
+                );
     }
 
     @SuppressLint("CheckResult")
     public void deleteTag(Tag tag) {
-        repo
-                .deleteTag(tag.getId())
+        helper
+                .removeTag(tag)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe((unused, throwable) -> getData());
+                .subscribe(
+                        booleanStringPair -> {
+                            if (booleanStringPair.first) {
+                                List<Tag> newTags = tags.getValue();
+                                newTags.remove(tag);
+                                tags.postValue(newTags);
+                            } else {
+                                Log.e(getClass().getCanonicalName(), booleanStringPair.second);
+                            }
+                        },
+                        throwable -> {
+                            Log.e(getClass().getCanonicalName(), throwable.toString());
+                        }
+                );
     }
 
     public void subscribe(Tag tag) {
@@ -146,13 +117,6 @@ public class HomeViewModel extends ViewModel {
         updateLastTagsIDs(tags.getValue());
     }
 
-    public boolean isInitiated() {
-        return isInitiated;
-    }
-
-    public void setInitiated(boolean initiated) {
-        isInitiated = initiated;
-    }
 
     public MutableLiveData<List<Tag>> getTags() {
         return tags;
@@ -160,13 +124,5 @@ public class HomeViewModel extends ViewModel {
 
     public MutableLiveData<List<Option>> getOptions() {
         return options;
-    }
-
-    public List<Tag> getTagsAsList() {
-        return tags.getValue();
-    }
-
-    public List<Option> getOptionsAsList() {
-        return options.getValue();
     }
 }

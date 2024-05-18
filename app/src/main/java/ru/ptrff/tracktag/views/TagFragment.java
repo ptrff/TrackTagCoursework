@@ -26,6 +26,8 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 
+import java.util.HashMap;
+
 import ru.ptrff.tracktag.R;
 import ru.ptrff.tracktag.data.OptionActions;
 import ru.ptrff.tracktag.data.UserData;
@@ -67,7 +69,7 @@ public class TagFragment extends Fragment {
             if (tag.getImage() != null && !tag.getImage().isEmpty()) {
                 binding.tag.image.setVisibility(View.VISIBLE);
                 Glide.with(binding.tag.image.getContext())
-                        .load("https://maps.rtuitlab.dev" + tag.getImage())
+                        .load(tag.getImage())
                         .listener(new RequestListener<Drawable>() {
                             @Override
                             public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
@@ -94,11 +96,24 @@ public class TagFragment extends Fragment {
                 binding.tag.author.setText(R.string.guest);
             }
 
+            // admin sub
+            if (UserData.getInstance().getRole().equals("admin")) {
+                binding.tag.admSubButton.setVisibility(View.VISIBLE);
+                binding.tag.admSubButton.setCheckable(true);
+                binding.tag.admSubButton.setIconResource(R.drawable.sl_notification);
+                binding.tag.admSubButton.setChecked(UserData.getInstance().isSubscribed(tag.getUser()));
+                binding.tag.admSubButton.setOnClickListener(v -> viewModel.subscribe(tag));
+            } else {
+                binding.tag.admSubButton.setVisibility(View.GONE);
+            }
+
             // options
             if (tag.getUser() != null) {
                 binding.tag.optionsButton.setVisibility(View.VISIBLE);
                 if (UserData.getInstance().isLoggedIn()
-                        && UserData.getInstance().getUserName().equals(tag.getUser().getUsername())) {
+                        && (UserData.getInstance().getUserName().equals(tag.getUser().getUsername()) ||
+                        UserData.getInstance().getRole().equals("admin"))
+                ) {
                     binding.tag.optionsButton.setCheckable(false);
                     binding.tag.optionsButton.setIconResource(R.drawable.ic_delete);
                     binding.tag.optionsButton.setOnClickListener(v -> {
@@ -121,20 +136,22 @@ public class TagFragment extends Fragment {
             binding.tag.description.setText(tag.getDescription());
 
             // like
+            if(tag.getLikes() == null) tag.setLikes(new HashMap<>());
             binding.tag.likeButton.clearOnCheckedChangeListeners();
             binding.tag.likeButton.setCheckable(UserData.getInstance().isLoggedIn());
-            binding.tag.likeButton.setChecked(tag.getLiked());
-            binding.tag.likeButton.setText("" + tag.getLikes());
+            binding.tag.likeButton.setChecked(
+                    tag.getLikes().containsKey(UserData.getInstance().getUserId())
+            );
+            binding.tag.likeButton.setText("" + tag.getLikes().size());
             binding.tag.likeButton.addOnCheckedChangeListener((button, isChecked) -> {
-                tag.setLiked(isChecked);
                 if (isChecked) {
-                    tag.setLikes(tag.getLikes() + 1);
+                    tag.getLikes().put(UserData.getInstance().getUserId(), UserData.getInstance().getUserId());
                     viewModel.likeTag(tag, true);
                 } else {
-                    tag.setLikes(tag.getLikes() - 1);
+                    tag.getLikes().remove(UserData.getInstance().getUserId());
                     viewModel.likeTag(tag, false);
                 }
-                binding.tag.likeButton.setText("" + tag.getLikes());
+                binding.tag.likeButton.setText("" + tag.getLikes().size());
             });
             //focus
             binding.tag.focusButton.setOnClickListener(v -> {
@@ -159,7 +176,7 @@ public class TagFragment extends Fragment {
         binding.tag.image.requestLayout();
     }
 
-    private void initObservers(){
+    private void initObservers() {
         viewModel.getDeleteDone().observe(getViewLifecycleOwner(), success -> {
             Toast.makeText(requireContext(), R.string.tag_deleted, Toast.LENGTH_SHORT).show();
             callback.performAction(OptionActions.LIST);

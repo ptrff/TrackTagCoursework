@@ -25,6 +25,7 @@ import com.bumptech.glide.request.target.Target;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -90,7 +91,7 @@ public class TagsAdapter extends ListAdapter<Tag, TagsAdapter.ViewHolder> {
         if (tag.getImage() != null && !tag.getImage().isEmpty()) {
             holder.binding.image.setVisibility(View.VISIBLE);
             Glide.with(holder.binding.image.getContext())
-                    .load("https://maps.rtuitlab.dev" + tag.getImage())
+                    .load(tag.getImage())
                     .listener(new RequestListener<Drawable>() {
                         @Override
                         public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
@@ -117,11 +118,28 @@ public class TagsAdapter extends ListAdapter<Tag, TagsAdapter.ViewHolder> {
             holder.binding.author.setText(R.string.guest);
         }
 
+        // admin sub
+        if (UserData.getInstance().getRole().equals("admin")) {
+            holder.binding.admSubButton.setVisibility(View.VISIBLE);
+            holder.binding.admSubButton.setCheckable(true);
+            holder.binding.admSubButton.setIconResource(R.drawable.sl_notification);
+            holder.binding.admSubButton.setChecked(UserData.getInstance().isSubscribed(tag.getUser()));
+            holder.binding.admSubButton.setOnClickListener(v -> {
+                if (tagEvents != null) {
+                    tagEvents.onSubscribeClick(tag);
+                }
+            });
+        } else {
+            holder.binding.admSubButton.setVisibility(View.GONE);
+        }
+
         // options
         if (tag.getUser() != null) {
             holder.binding.optionsButton.setVisibility(View.VISIBLE);
-            if (UserData.getInstance().isLoggedIn()
-                    && UserData.getInstance().getUserName().equals(tag.getUser().getUsername())) {
+            if (UserData.getInstance().isLoggedIn() && (
+                    UserData.getInstance().getUserName().equals(tag.getUser().getUsername()) ||
+                            UserData.getInstance().getRole().equals("admin")
+            )) {
                 holder.binding.optionsButton.setCheckable(false);
                 holder.binding.optionsButton.setIconResource(R.drawable.ic_delete);
                 holder.binding.optionsButton.setOnClickListener(v -> {
@@ -147,20 +165,25 @@ public class TagsAdapter extends ListAdapter<Tag, TagsAdapter.ViewHolder> {
         holder.binding.description.setText(tag.getDescription());
 
         // like
+        if (tag.getLikes() == null) {
+            tag.setLikes(new HashMap<>());
+        }
+
         holder.binding.likeButton.clearOnCheckedChangeListeners();
         holder.binding.likeButton.setCheckable(UserData.getInstance().isLoggedIn());
-        holder.binding.likeButton.setChecked(tag.getLiked());
-        holder.binding.likeButton.setText("" + tag.getLikes());
+        holder.binding.likeButton.setChecked(
+                tag.getLikes().containsKey(UserData.getInstance().getUserId())
+        );
+        holder.binding.likeButton.setText("" + tag.getLikes().size());
         holder.binding.likeButton.addOnCheckedChangeListener((button, isChecked) -> {
-            tag.setLiked(isChecked);
             if (isChecked) {
-                tag.setLikes(tag.getLikes() + 1);
+                tag.getLikes().put(UserData.getInstance().getUserId(), UserData.getInstance().getUserId());
                 tagEvents.onLikeClick(tag, true);
             } else {
-                tag.setLikes(tag.getLikes() - 1);
+                tag.getLikes().remove(UserData.getInstance().getUserId());
                 tagEvents.onLikeClick(tag, false);
             }
-            holder.binding.likeButton.setText("" + tag.getLikes());
+            holder.binding.likeButton.setText("" + tag.getLikes().size());
         });
         //focus
         holder.binding.focusButton.setOnClickListener(v -> {
@@ -173,22 +196,16 @@ public class TagsAdapter extends ListAdapter<Tag, TagsAdapter.ViewHolder> {
     @SuppressLint("CheckResult")
     public void filter(CharSequence query) {
         SearchFilter f = SearchFilter.getInstance();
-
         if (allTags == null) return;
-
         Observable.fromIterable(allTags)
                 .subscribeOn(Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread())
                 .filter(tag -> {
-                    if (f.getByUsers() != null && f.getByUsers() && tag.getUser() == null)
+                    if (f.getWithImage() != null && f.getWithImage() && !tag.getImage().isEmpty())
                         return false;
-                    if (f.getByGuests() != null && f.getByGuests() && tag.getUser() != null)
+                    if (f.getWithoutImage() != null && f.getWithoutImage() && !tag.getImage().isEmpty())
                         return false;
-                    if (f.getWithImage() != null && f.getWithImage() && tag.getImage() == null)
-                        return false;
-                    if (f.getWithoutImage() != null && f.getWithoutImage() && tag.getImage()!=null)
-                        return false;
-                    if (f.getWithNoLikes() != null && f.getWithNoLikes() && tag.getLikes() != 0)
+                    if (f.getWithNoLikes() != null && f.getWithNoLikes() && !tag.getLikes().isEmpty())
                         return false;
                     return true;
                 })
@@ -196,11 +213,9 @@ public class TagsAdapter extends ListAdapter<Tag, TagsAdapter.ViewHolder> {
                     if (query != null && !query.toString().isEmpty()) {
                         String filterPattern = query.toString().toLowerCase().trim();
                         if (f.getFilterBy() == null || f.getFilterBy() == 0) {
-                            // Filter by author
                             return tag.getUser() != null && tag.getUser().getUsername() != null &&
                                     tag.getUser().getUsername().toLowerCase().contains(filterPattern);
                         } else {
-                            // Filter by description
                             return tag.getDescription() != null && tag.getDescription().toLowerCase().contains(filterPattern);
                         }
                     }
@@ -210,11 +225,9 @@ public class TagsAdapter extends ListAdapter<Tag, TagsAdapter.ViewHolder> {
                     if (f.getSortBy() != null) {
                         switch (f.getSortBy()) {
                             case 2:
-                                return Comparator.comparing(tag -> ((Tag) tag).getUser().getUsername())
-                                        .compare(tag1, tag2);
+                                return Comparator.comparing(tag -> ((Tag) tag).getUser().getUsername()).compare(tag1, tag2);
                             case 3:
-                                return Comparator.comparing(Tag::getLikes).reversed()
-                                        .compare(tag1, tag2);
+                                return Comparator.comparing(tag -> ((Tag) tag).getLikes().size()).reversed().compare(tag1, tag2);
                         }
                     }
                     return 0;
@@ -225,11 +238,7 @@ public class TagsAdapter extends ListAdapter<Tag, TagsAdapter.ViewHolder> {
                     }
                     return filteredList;
                 })
-                .subscribe(
-                        this::submitList,
-                        (@SuppressLint("CheckResult") Throwable throwable) -> {
-                            Log.e(this.getClass().getCanonicalName(), "Filter error", throwable);
-                        });
+                .subscribe(this::submitList, throwable -> Log.e(this.getClass().getCanonicalName(), "Filter error", throwable));
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

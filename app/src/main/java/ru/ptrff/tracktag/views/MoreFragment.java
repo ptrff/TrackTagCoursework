@@ -1,5 +1,8 @@
 package ru.ptrff.tracktag.views;
 
+import static ru.ptrff.tracktag.data.OptionActions.SAVE;
+
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.util.TypedValue;
@@ -17,6 +20,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import ru.ptrff.tracktag.R;
 import ru.ptrff.tracktag.adapters.OptionsListAdapter;
+import ru.ptrff.tracktag.api.FirebaseHelper;
 import ru.ptrff.tracktag.data.OptionActions;
 import ru.ptrff.tracktag.data.Options;
 import ru.ptrff.tracktag.data.UserData;
@@ -53,7 +57,7 @@ public class MoreFragment extends Fragment {
         binding.optionsList.setLayoutManager(new LinearLayoutManager(requireContext()));
         OptionsListAdapter adapter = new OptionsListAdapter(
                 getLayoutInflater(),
-                UserData.getInstance().isLoggedIn() ? Options.user : Options.guest
+                Options.more
         );
         adapter.setOnOptionClickListener(option -> callback.performAction(option.getAction()));
         binding.optionsList.setAdapter(adapter);
@@ -65,7 +69,9 @@ public class MoreFragment extends Fragment {
                         dialog.dismiss();
                         UserData.getInstance().logout();
                         Toast.makeText(requireContext(),  R.string.you_have_logged_out, Toast.LENGTH_SHORT).show();
-                        ((MainFragmentCallback) requireActivity()).performAction(OptionActions.LIST);
+                        Intent intent = new Intent(requireContext(), AuthActivity.class);
+                        startActivity(intent);
+                        requireActivity().finish();
                     })
                     .setNegativeButton(R.string.stay, (dialog, which) -> {
                         dialog.dismiss();

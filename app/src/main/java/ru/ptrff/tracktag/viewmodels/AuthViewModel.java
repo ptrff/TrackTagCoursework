@@ -6,103 +6,116 @@ import android.util.Log;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import ru.ptrff.tracktag.R;
-import ru.ptrff.tracktag.api.MapsRepository;
-import ru.ptrff.tracktag.api.dto.LoginRequest;
-import ru.ptrff.tracktag.api.dto.LoginResponse;
-import ru.ptrff.tracktag.api.dto.RegisterRequest;
-import ru.ptrff.tracktag.api.dto.RegisterResponse;
+import ru.ptrff.tracktag.api.FirebaseHelper;
 import ru.ptrff.tracktag.data.UserData;
 
 public class AuthViewModel extends ViewModel {
 
     private final MutableLiveData<Boolean> loggedIn = new MutableLiveData<>();
-    private final MutableLiveData<Integer> authError = new MutableLiveData<>();
-    private MapsRepository repo;
+    private final MutableLiveData<Boolean> authError = new MutableLiveData<>();
+    private String authErrorText;
+    private FirebaseHelper helper;
 
     public AuthViewModel() {
-        repo = new MapsRepository();
+        helper = FirebaseHelper.getInstance();
     }
 
     @SuppressLint("CheckResult")
-    public void register(String login, String password) {
-        repo
-                .register(new RegisterRequest(
-                        login.replace(" ", ""),
-                        password.replace(" ", "")
-                ))
+    public void register(String email, String username, String password) {
+        helper
+                .register(email, password)
+                .flatMap(booleanStringPair -> {
+                    if (booleanStringPair.first) {
+                        return helper.addNewUserToDatabase(booleanStringPair.second, username);
+                    } else {
+                        return Flowable.just(booleanStringPair);
+                    }
+                })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        registerResponse -> handleRegisterResponse(
-                                registerResponse,
-                                login.replace(" ", ""),
-                                password.replace(" ", "")
-                        ),
-                        throwable -> Log.e(getClass().getCanonicalName(), throwable.toString())
-                );
+                .subscribe(booleanStringPair -> {
+                    if (booleanStringPair.first) {
+                        Map<String, Object> userData = (Map<String, Object>) parseStringToMap(booleanStringPair.second);
+                        String role = (String) userData.get("role");
+                        String id = (String) userData.get("id");
+
+                        UserData data = UserData.getInstance();
+                        data.setUserId(id);
+                        data.setUserName(username);
+                        data.setRole(role);
+                        data.setEmail(email);
+                        data.setLoggedIn(true);
+
+                        loggedIn.postValue(true);
+                    } else {
+
+                        authErrorText = booleanStringPair.second;
+                        authError.postValue(true);
+                    }
+                }, throwable -> Log.e(getClass().getCanonicalName(), throwable.toString()));
     }
 
     @SuppressLint("CheckResult")
-    public void login(String login, String password) {
-        repo
-                .login(new LoginRequest(
-                        login.replace(" ", ""),
-                        password.replace(" ", "")
-                ))
+    public void login(String email, String password) {
+        helper
+                .login(email, password)
+                .flatMap(booleanStringPair -> {
+                    if (booleanStringPair.first) {
+                        return helper.findUserInDatabase(booleanStringPair.second);
+                    } else {
+                        return Flowable.just(booleanStringPair);
+                    }
+                })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        loginResponse -> handleLoginResponse(
-                                loginResponse,
-                                login.replace(" ", "")
-                        ),
-                        throwable -> Log.e(getClass().getCanonicalName(), throwable.toString())
-                );
+                .subscribe(booleanStringPair -> {
+                    if (booleanStringPair.first) {
+                        Map<String, Object> userData = (Map<String, Object>) parseStringToMap(booleanStringPair.second);
+                        String username = (String) userData.get("username");
+                        String role = (String) userData.get("role");
+                        String id = (String) userData.get("id");
+
+                        UserData data = UserData.getInstance();
+                        data.setUserId(id);
+                        data.setUserName(username);
+                        data.setRole(role);
+                        data.setEmail(email);
+                        data.setLoggedIn(true);
+
+                        loggedIn.postValue(true);
+                    } else {
+                        authErrorText = booleanStringPair.second;
+                        authError.postValue(true);
+                    }
+                }, throwable -> Log.e(getClass().getCanonicalName(), throwable.toString()));
     }
 
-    private void handleRegisterResponse(RegisterResponse registerResponse, String login, String password) {
-        if (registerResponse.getId() != null && registerResponse.getUsername() != null) {
-            UserData.getInstance().setUserId(registerResponse.getId());
-            UserData.getInstance().setUserName(registerResponse.getUsername());
-            login(login, password);
-        } else if (registerResponse.getDetail() != null
-                && registerResponse.getDetail().equals("REGISTER_USER_ALREADY_EXISTS")) {
-            authError.postValue(R.string.user_exists);
-        } else if (registerResponse.getDetail() != null
-                && registerResponse.getDetail().equals("REGISTER_INVALID_PASSWORD")) {
-            authError.postValue(R.string.password_too_short);
-        } else {
-            authError.postValue(R.string.unknown_error);
-        }
-    }
+    public static Map<String, Object> parseStringToMap(String mapString) {
+        String[] keyValuePairs = mapString.substring(1, mapString.length() - 1).split(", ");
 
-    private void handleLoginResponse(LoginResponse loginResponse, String login) {
-        if (Objects.equals(loginResponse.getTokenType(), "bearer")) {
-            UserData.getInstance().setLoggedIn(true);
-            UserData.getInstance().setAccessToken(loginResponse.getAccessToken());
-            UserData.getInstance().setUserName(login);
-            loggedIn.postValue(true);
-        } else if (loginResponse.getDetail() != null
-                && loginResponse.getDetail().equals("LOGIN_BAD_CREDENTIALS")) {
-            authError.postValue(R.string.login_bad_credentials);
-        } else if (loginResponse.getDetail() != null
-                && loginResponse.getDetail().equals("LOGIN_USER_NOT_VERIFIED")) {
-            authError.postValue(R.string.login_user_not_verified);
-        } else {
-            authError.postValue(R.string.unknown_error);
+        Map<String, Object> map = new HashMap<>();
+        for (String pair : keyValuePairs) {
+            String[] entry = pair.split("=");
+            map.put(entry[0], entry[1]);
         }
+        return map;
     }
 
     public MutableLiveData<Boolean> getLoggedIn() {
         return loggedIn;
     }
 
-    public MutableLiveData<Integer> getAuthError() {
+    public MutableLiveData<Boolean> getAuthError() {
         return authError;
+    }
+
+    public String getAuthErrorText() {
+        return authErrorText;
     }
 }
